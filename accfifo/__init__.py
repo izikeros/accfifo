@@ -35,7 +35,7 @@ import datetime
 from collections import deque
 
 
-class Entry(object):
+class Entry:
     """
     Defines an accounting entry.
     """
@@ -49,14 +49,14 @@ class Entry(object):
         Note the factor parameter. This prameter is applied to the
         price.
         """
-        ## Save data slots:
+        # Save data slots:
         self.quantity = quantity
         self.price = price
         self.factor = factor
         self.data = kwargs
 
     def __repr__(self):
-        return "%s @%s" % (self.quantity, self.price)
+        return f"{self.quantity} @{self.price}"
 
     @property
     def size(self):
@@ -79,10 +79,15 @@ class Entry(object):
         return self.quantity * self.price * self.factor
 
     def copy(self, quantity=None):
-        return Entry(quantity or self.quantity, self.price, self.factor, **self.data.copy())
+        return Entry(
+            quantity=quantity or self.quantity,
+            price=self.price,
+            factor=self.factor,
+            **self.data.copy(),
+        )
 
 
-class FIFO(object):
+class FIFO:
     """
     Implements a FIFO accounting rule by (1) calculating the cost of
     the inventory in hand, (2) calculating the historical PnL trace.
@@ -94,19 +99,19 @@ class FIFO(object):
 
         Note that entries are supposed to be sorted.
         """
-        ## Mark the start timestamp:
+        # Mark the start timestamp:
         self._started_at = datetime.datetime.now()
         self._finished_at = None
 
-        ## Save data slots:
+        # Save data slots:
         self._entries = entries or []
 
-        ## Declare and initialize private fields to be used during computing:
+        # Declare and initialize private fields to be used during computing:
         self._balance = 0
         self.inventory = deque()
         self.trace = []
 
-        ## Start computing:
+        # Start computing:
         self._compute()
 
     @property
@@ -128,21 +133,23 @@ class FIFO(object):
         """
         Returns the inventory valuation.
         """
-        return sum([s.quantity * s.price for s in self.inventory])
+        return sum(s.quantity * s.price for s in self.inventory)
 
     @property
     def valuation_factored(self):
         """
         Returns the inventory valuation which is factored.
         """
-        return sum([s.quantity * s.price * s.factor for s in self.inventory])
+        return sum(s.quantity * s.price * s.factor for s in self.inventory)
 
     @property
     def profit_and_loss(self):
         """
         Returns the realized profit and loss.
         """
-        return sum([e.price * e.quantity for entries_lst in self.trace for e in entries_lst])
+        return sum(
+            e.price * e.quantity for entries_lst in self.trace for e in entries_lst
+        )
 
     @property
     def profit_and_loss_factored(self):
@@ -150,10 +157,9 @@ class FIFO(object):
         Returns the realized profit and loss.
         """
         return sum(
-            [e.price * e.quantity * e. factor
-             for entries_lst in self.trace
-             for e in entries_lst
-             ]
+            e.price * e.quantity * e.factor
+            for entries_lst in self.trace
+            for e in entries_lst
         )
 
     @property
@@ -161,7 +167,7 @@ class FIFO(object):
         """
         Returns the average cost of the inventory.
         """
-        ## If we don't have any stock, simply return None, else average:
+        # If we don't have any stock, simply return None, else average:
         return None if self._balance == 0 else (self.valuation / self._balance)
 
     @property
@@ -169,7 +175,7 @@ class FIFO(object):
         """
         Returns the average cost of the inventory which is factored.
         """
-        ## If we don't have any stock, simply return None, else average:
+        # If we don't have any stock, simply return None, else average:
         return None if self._balance == 0 else (self.valuation_factored / self._balance)
 
     @property
@@ -192,72 +198,72 @@ class FIFO(object):
         """
         Fills existing stock entries by calculating new stocks if required.
         """
-        ## OK, we know that this is a contra-entry for our existing
-        ## stock entries, ie. if our balance is positive, this is
-        ## negative, or vice-versa. Keep in mind that it may even be
-        ## bigger in quantity compared to out balance which will
-        ## eventually reverse the sign of our balance, like selling
-        ## 100 items when we have stock only for 50. This function
-        ## will deal with these situations and calculate new stock
-        ## entries.
+        # OK, we know that this is a contra-entry for our existing
+        # stock entries, ie. if our balance is positive, this is
+        # negative, or vice-versa. Keep in mind that it may even be
+        # bigger in quantity compared to out balance which will
+        # eventually reverse the sign of our balance, like selling
+        # 100 items when we have stock only for 50. This function
+        # will deal with these situations and calculate new stock
+        # entries.
         ##
-        ## OK, let's start with this munch-fill-reverse cycle by
-        ## creating a copy of the entry:
+        # OK, let's start with this munch-fill-reverse cycle by
+        # creating a copy of the entry:
         entry = entry.copy()
 
-        ## We will continue as long as the entry has quantity:
+        # We will continue as long as the entry has quantity:
         while not entry.zero:
-            ## Let's consume the earliest entry from the
-            ## inventory. But, if the inventory is empty, we can then
-            ## safely push the entry to the inventory:
+            # Let's consume the earliest entry from the
+            # inventory. But, if the inventory is empty, we can then
+            # safely push the entry to the inventory:
             if self.is_empty:
-                ## Yes, the inventory is empty. Push:
+                # Yes, the inventory is empty. Push:
                 self._push(entry)
 
-                ## We are done here now! Return:
+                # We are done here now! Return:
                 return
 
-            ## We have entries in the inventory. Get the earliest:
+            # We have entries in the inventory. Get the earliest:
             earliest = self.inventory.popleft()
 
-            ## There are 3 possible cases:
+            # There are 3 possible cases:
             ##
-            ## 1. entry.size < earliest.size  : Munch from earliest, put earliest back and return
-            ## 2. entry.size == earliest.size : Remove the earliest entirely and return
-            ## 3. entry.size > earliest.size  : Remove the earliest, adjust entry and continue cycle
+            # 1. entry.size < earliest.size  : Munch from earliest, put earliest back and return
+            # 2. entry.size == earliest.size : Remove the earliest entirely and return
+            # 3. entry.size > earliest.size  : Remove the earliest, adjust entry and continue cycle
             ##
-            ## Note that in any of these cases we will update the
-            ## trace, too. Let's start:
+            # Note that in any of these cases we will update the
+            # trace, too. Let's start:
             if entry.size <= earliest.size:
-                ## We will now munch from the earliest:
+                # We will now munch from the earliest:
                 munched = earliest.copy(-entry.quantity)
 
-                ## Update the earliest:
+                # Update the earliest:
                 earliest.quantity += entry.quantity
 
-                ## Put earliest back to the inventory if still have quantity:
+                # Put earliest back to the inventory if still have quantity:
                 if earliest.quantity != 0:
                     self.inventory.appendleft(earliest)
 
-                ## Update the trace:
+                # Update the trace:
                 self.trace.append([munched, entry])
 
-                ## Update the balance:
+                # Update the balance:
                 self._balance += entry.quantity
 
-                ## Done, return:
+                # Done, return:
                 return
             else:
-                ## Munch from the entry:
+                # Munch from the entry:
                 munched = entry.copy(-earliest.quantity)
 
-                ## Update the entry:
+                # Update the entry:
                 entry.quantity += earliest.quantity
 
-                ## Update the trace:
+                # Update the trace:
                 self.trace.append([earliest, munched])
 
-                ## Update the balance and continue:
+                # Update the balance and continue:
                 self._balance += munched.quantity
 
     def _compute(self):
@@ -265,79 +271,88 @@ class FIFO(object):
         Computes the FIFO accounting for the given entries and produces
         the (1) cost of the inventory in hand, (2) historical PnL trace.
         """
-        ## We will iterate over the entries and operate on the
-        ## inventory. Let's start:
+        # We will iterate over the entries and operate on the
+        # inventory. Let's start:
         for entry in self._entries:
-            ## We will add new stock to the inventory or remove
-            ## existing stock from the inventory. It looks pretty
-            ## straight-forward. But is it?
+            # We will add new stock to the inventory or remove
+            # existing stock from the inventory. It looks pretty
+            # straight-forward. But is it?
             ##
-            ## There is a special case which is called "short-selling"
-            ## in the financial jargon. This is similar to backorders
-            ## in the convential trading of goods which means selling
-            ## goods which you don't have in your inventory yet.
+            # There is a special case which is called "short-selling"
+            # in the financial jargon. This is similar to backorders
+            # in the convential trading of goods which means selling
+            # goods which you don't have in your inventory yet.
             ##
-            ## This means that we have the following possible
-            ## situations:
+            # This means that we have the following possible
+            # situations:
             ##
-            ## | Stock    | Entry |
-            ## |----------|-------|
-            ## | positive | buy   |
-            ## | positive | sell  |
-            ## | negative | buy   |
-            ## | negative | sell  |
+            # | Stock    | Entry |
+            # |----------|-------|
+            # | positive | buy   |
+            # | positive | sell  |
+            # | negative | buy   |
+            # | negative | sell  |
             ##
-            ## As you see, there are two cases which are pretty easy
-            ## to handle:
+            # As you see, there are two cases which are pretty easy
+            # to handle:
             ##
-            ## | Stock    | Entry | Action        |
-            ## |----------|-------|---------------|
-            ## | positive | buy   | Keep adding   |
-            ## | negative | sell  | Keep removing |
+            # | Stock    | Entry | Action        |
+            # |----------|-------|---------------|
+            # | positive | buy   | Keep adding   |
+            # | negative | sell  | Keep removing |
             ##
-            ## Let's do this:
-            if (self._balance >= 0 and entry.buy) or (self._balance <= 0 and entry.sell):
-                ## Yes, we will push the entry to the inventory as is:
+            # Let's do this:
+            if (self._balance >= 0 and entry.buy) or (
+                self._balance <= 0 and entry.sell
+            ):
+                # Yes, we will push the entry to the inventory as is:
                 self._push(entry)
-            ## Good, we will now proceed with the more complicated
-            ## operation: Closing previously opened stock
-            ## positions. This applies to the following cases with the
-            ## required actions to be taken respectively.
+            # Good, we will now proceed with the more complicated
+            # operation: Closing previously opened stock
+            # positions. This applies to the following cases with the
+            # required actions to be taken respectively.
             ##
-            ## | Stock    | Entry | Action                                     |
-            ## |----------|-------|--------------------------------------------|
-            ## | positive | sell  | Munch from stock (and reverse if required) |
-            ## | negative | buy   | Fill backorders (and reverse if required)  |
+            # | Stock    | Entry | Action                                     |
+            # |----------|-------|--------------------------------------------|
+            # | positive | sell  | Munch from stock (and reverse if required) |
+            # | negative | buy   | Fill backorders (and reverse if required)  |
             ##
-            ## Note that we must make sure that we skip "0"-quantity entries.
+            # Note that we must make sure that we skip "0"-quantity entries.
             elif not entry.zero:
-                ## OK, the entry is not zero. We will proceeding
-                ## filling positions:
+                # OK, the entry is not zero. We will proceeding
+                # filling positions:
                 self._fill(entry)
 
-            ## We are done with the entry. Let's move to the next one.
+            # We are done with the entry. Let's move to the next one.
 
-        ## This marks the end of the the FIFO computation:
+        # This marks the end of the the FIFO computation:
         self._finished_at = datetime.datetime.now()
 
 
 if __name__ == "__main__":
-    ## NOTE: Not for production purposes.
+    # NOTE: Not for production purposes.
     ##
-    ## Consume a CSV file of entries and calculate FIFO
-    ## accounting. First import libraries:
+    # Consume a CSV file of entries and calculate FIFO
+    # accounting. First import libraries:
     import sys
     import csv
 
-    ## Run a CSV file of entries and see the results if argument provided:
+    # Run a CSV file of entries and see the results if argument provided:
     if len(sys.argv) > 1:
-        ## Read entries:
-        entries = [Entry(float(line[0]), float(line[1]), float(line[2]) if len(line) > 2 else 1) for line in csv.reader(open(sys.argv[1]))]
+        # Read entries:
+        entries = [
+            Entry(
+                quantity=float(line[0]),
+                price=float(line[1]),
+                factor=float(line[2]) if len(line) > 2 else 1,
+            )
+            for line in csv.reader(open(sys.argv[1]))
+        ]
 
-        ## Run fifo:
+        # Run fifo:
         fifo = FIFO(entries)
 
-        ## Print output:
+        # Print output:
         print("Available Stock          : ", fifo.stock)
         print("Stock Valuation          : ", fifo.valuation)
         print("Factored Average Cost    : ", fifo.avgcost)
@@ -346,7 +361,7 @@ if __name__ == "__main__":
         print("Trace Length             : ", len(fifo.trace))
         print("Total Runtime            : ", fifo.runtime)
 
-        ## Print trace:
+        # Print trace:
         if not (len(sys.argv) > 2 and sys.argv[2] == "-q"):
             for element in fifo.trace:
-                print("    ", ",".join(["(%s)" % (i,) for i in element]))
+                print("    ", ",".join([f"({i})" for i in element]))
