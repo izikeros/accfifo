@@ -3,7 +3,7 @@ This module provides the setup guidelines.
 """
 from distutils.core import setup
 
-## Setup now:
+# Setup now:
 setup(
     name="accfifo",
     version="0.1.2",
