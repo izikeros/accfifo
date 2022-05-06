@@ -1,0 +1,3 @@
+[bandit]
+targets: ./accfifo, ./test_accfifo
+skips: B101
