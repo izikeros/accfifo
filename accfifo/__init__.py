@@ -33,6 +33,7 @@ Computes the FIFO accounting valuation and stock inventory.
 
 import datetime
 from collections import deque
+from typing import List, Union
 
 
 class Entry:
@@ -150,6 +151,25 @@ class FIFO:
         return sum(
             e.price * e.quantity for entries_lst in self.trace for e in entries_lst
         )
+
+    @property
+    def profit_and_loss_trace(self):
+        """
+        Returns the realized profit and loss trace.
+        """
+
+        def cumsum(lst: List[Union[int, float]]):
+            n = len(lst)
+            cummulative = [sum(lst[0:x:1]) for x in range(0, n + 1)]
+            return cummulative[1:]
+
+        # TODO: KS: 2022-05-06: Consider having pnl as a list of tuples where
+        #   the first element PnL value and the rest of tuple elements are from kwargs
+        #   of the Entry object (i.e **e.data).
+        pnl = [e.price * e.quantity for entries_lst in self.trace for e in entries_lst]
+        ret_lst = cumsum(pnl)
+        return ret_lst
+
 
     @property
     def profit_and_loss_factored(self):
