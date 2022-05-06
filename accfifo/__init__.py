@@ -33,7 +33,8 @@ Computes the FIFO accounting valuation and stock inventory.
 
 import datetime
 from collections import deque
-from typing import List, Union
+from typing import List
+from typing import Union
 
 
 class Entry:
@@ -169,7 +170,6 @@ class FIFO:
         pnl = [e.price * e.quantity for entries_lst in self.trace for e in entries_lst]
         ret_lst = cumsum(pnl)
         return ret_lst
-
 
     @property
     def profit_and_loss_factored(self):
